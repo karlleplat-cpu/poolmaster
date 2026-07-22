@@ -492,16 +492,17 @@
                     </p>
                 </div>
                 
-                <!-- Mode PWA: Alert Button + Settings -->
+                <!-- Mode PWA: Alert Button -->
                 <div id="pwaMode" style="display:none;">
                     <button class="alert-btn ${alertsEnabled ? 'on' : 'off'}" id="alertBtn" onclick="toggleAlerts()">
                         ${alertsEnabled ? '🔔 Alertes activées' : '🔕 Activer les alertes'}
                     </button>
-                    
-                    <button class="alert-btn off" onclick="toggleSettings()" style="margin-top:8px; font-size:14px;">
-                        ⚙️ Configurer les seuils
-                    </button>
                 </div>
+                
+                <!-- Settings Toggle (visible in both modes) -->
+                <button class="alert-btn off" onclick="toggleSettings()" style="margin-top:8px; font-size:14px;">
+                    ⚙️ Configurer les seuils
+                </button>
                 
                 <!-- Settings Panel (both modes) -->
                 <div class="settings-panel" id="settingsPanel">
