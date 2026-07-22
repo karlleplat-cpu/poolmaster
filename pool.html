@@ -337,6 +337,21 @@
                     'orp-high'
                 );
             }
+            
+            // Temperature alerts
+            if (temp < thresholds.Temp_min) {
+                sendNotification(
+                    '❄️ Eau Trop Froide !',
+                    `Température: ${temp.toFixed(1)}°C (min: ${thresholds.Temp_min}°C)`,
+                    'temp-low'
+                );
+            } else if (temp > thresholds.Temp_max) {
+                sendNotification(
+                    '🔥 Eau Trop Chaude !',
+                    `Température: ${temp.toFixed(1)}°C (max: ${thresholds.Temp_max}°C)`,
+                    'temp-high'
+                );
+            }
         }
         
         async function toggleAlerts() {
@@ -374,6 +389,8 @@
             thresholds.pH_max = parseFloat(document.getElementById('phMax').value) || 7.8;
             thresholds.ORP_min = parseFloat(document.getElementById('orpMin').value) || 650;
             thresholds.ORP_max = parseFloat(document.getElementById('orpMax').value) || 850;
+            thresholds.Temp_min = parseFloat(document.getElementById('tempMin').value) || 18;
+            thresholds.Temp_max = parseFloat(document.getElementById('tempMax').value) || 32;
             
             // Save locally
             localStorage.setItem('thresholds_' + deviceId, JSON.stringify(thresholds));
@@ -465,6 +482,15 @@
                             <input type="number" id="orpMin" value="${thresholds.ORP_min}" step="10">
                             <span>à</span>
                             <input type="number" id="orpMax" value="${thresholds.ORP_max}" step="10">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>Temp (°C)</label>
+                        <div>
+                            <input type="number" id="tempMin" value="${thresholds.Temp_min}" step="1">
+                            <span>à</span>
+                            <input type="number" id="tempMax" value="${thresholds.Temp_max}" step="1">
                         </div>
                     </div>
                     
