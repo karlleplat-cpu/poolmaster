@@ -482,22 +482,28 @@
                     </div>
                 </div>
                 
-                <!-- Alert Button -->
-                <button class="alert-btn ${alertsEnabled ? 'on' : 'off'}" id="alertBtn" onclick="toggleAlerts()">
-                    ${alertsEnabled ? '🔔 Alertes activées' : '🔕 Activer les alertes'}
-                </button>
+                <!-- Mode Browser: Install Button only -->
+                <div id="browserMode" style="display:none;">
+                    <button class="alert-btn off" id="installBtn" onclick="installPWA()" style="background:#4CAF50;">
+                        📲 Installer l'application pour les alertes
+                    </button>
+                    <p style="color:#666; text-align:center; margin-top:12px; font-size:13px;">
+                        Installez l'app pour recevoir les alertes même écran éteint
+                    </p>
+                </div>
                 
-                <!-- Install PWA Button (hidden by default, shown on Android) -->
-                <button class="alert-btn off" id="installBtn" onclick="installPWA()" style="display:none; margin-top:8px; background:#4CAF50;">
-                    📲 Installer l'application
-                </button>
+                <!-- Mode PWA: Alert Button + Settings -->
+                <div id="pwaMode" style="display:none;">
+                    <button class="alert-btn ${alertsEnabled ? 'on' : 'off'}" id="alertBtn" onclick="toggleAlerts()">
+                        ${alertsEnabled ? '🔔 Alertes activées' : '🔕 Activer les alertes'}
+                    </button>
+                    
+                    <button class="alert-btn off" onclick="toggleSettings()" style="margin-top:8px; font-size:14px;">
+                        ⚙️ Configurer les seuils
+                    </button>
+                </div>
                 
-                <!-- Settings Toggle -->
-                <button class="alert-btn off" onclick="toggleSettings()" style="margin-top:8px; font-size:14px;">
-                    ⚙️ Configurer les seuils
-                </button>
-                
-                <!-- Settings Panel -->
+                <!-- Settings Panel (both modes) -->
                 <div class="settings-panel" id="settingsPanel">
                     <h3>⚙️ Seuils d'alerte</h3>
                     
@@ -531,6 +537,9 @@
                     <button class="save-btn" onclick="saveThresholds()">💾 Sauvegarder</button>
                 </div>
             `;
+            
+            // Show the right buttons based on PWA mode
+            setTimeout(showModeButtons, 100);
         }
         
         function updateUI(ph, orp, temp, timestamp) {
@@ -620,16 +629,24 @@
             || window.navigator.standalone 
             || document.referrer.includes('android-app://');
         
+        // Show the right mode after sensors load
+        function showModeButtons() {
+            if (isStandalone) {
+                // PWA mode: show alerts button
+                document.getElementById('pwaMode').style.display = 'block';
+                document.getElementById('browserMode').style.display = 'none';
+            } else {
+                // Browser mode: show install button
+                document.getElementById('browserMode').style.display = 'block';
+                document.getElementById('pwaMode').style.display = 'none';
+            }
+        }
+        
         // Show install prompt for PWA
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Show install button after sensors load
-            setTimeout(() => {
-                const installBtn = document.getElementById('installBtn');
-                if (installBtn) installBtn.style.display = 'block';
-            }, 2000);
         });
         
         function installPWA() {
@@ -638,10 +655,15 @@
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
                         console.log('PWA installed');
+                        // After install, show PWA mode
+                        document.getElementById('browserMode').style.display = 'none';
+                        document.getElementById('pwaMode').style.display = 'block';
                     }
                     deferredPrompt = null;
-                    document.getElementById('installBtn').style.display = 'none';
                 });
+            } else {
+                // Fallback: show instructions
+                alert('Pour installer:\n\n📱 Android: Menu ⋮ → Installer l\'application\n\n🍎 iOS: Partager ⬆️ → Sur l\'écran d\'accueil');
             }
         }
         
