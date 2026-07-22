@@ -313,8 +313,8 @@
                 navigator.serviceWorker.ready.then((registration) => {
                     registration.showNotification(title, {
                         body: body,
-                        icon: './icon.svg',
-                        badge: './icon.svg',
+                        icon: '/poolmaster/icon.svg',
+                        badge: '/poolmaster/icon.svg',
                         tag: tag,
                         requireInteraction: true,
                         vibrate: [200, 100, 200]
@@ -324,7 +324,7 @@
                 // Fallback to regular notification
                 const notification = new Notification(title, {
                     body: body,
-                    icon: './icon.svg',
+                    icon: '/poolmaster/icon.svg',
                     tag: tag,
                     requireInteraction: true
                 });
@@ -606,7 +606,7 @@
         
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('/poolmaster/sw.js')
                 .then((registration) => {
                     console.log('Service Worker registered:', registration.scope);
                 })

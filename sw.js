@@ -1,9 +1,9 @@
 // PoolMaster Service Worker
-const CACHE_NAME = 'poolmaster-v2';
+const CACHE_NAME = 'poolmaster-v3';
 const urlsToCache = [
-  './pool.html',
-  './manifest.json',
-  './icon.svg'
+  '/poolmaster/pool.html',
+  '/poolmaster/manifest.json',
+  '/poolmaster/icon.svg'
 ];
 
 // Install - cache files
@@ -74,8 +74,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: './icons/icon-192.png',
-    badge: './icons/icon-192.png',
+    icon: '/poolmaster/icon.svg',
+    badge: '/poolmaster/icon.svg',
     vibrate: [200, 100, 200],
     tag: data.tag || 'poolmaster-alert',
     requireInteraction: true,
@@ -109,7 +109,7 @@ self.addEventListener('notificationclick', (event) => {
         }
         // Otherwise open a new window
         if (clients.openWindow) {
-          return clients.openWindow('./pool.html');
+          return clients.openWindow('/poolmaster/pool.html');
         }
       })
   );
@@ -123,8 +123,8 @@ self.addEventListener('message', (event) => {
     if (data.alert) {
       self.registration.showNotification(data.title, {
         body: data.body,
-        icon: './icons/icon-192.png',
-        badge: './icons/icon-192.png',
+        icon: '/poolmaster/icon.svg',
+        badge: '/poolmaster/icon.svg',
         vibrate: [200, 100, 200],
         tag: data.tag,
         requireInteraction: true
