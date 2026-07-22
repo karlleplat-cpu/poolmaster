@@ -298,41 +298,39 @@
         }
         
         function sendNotification(title, body, tag) {
+            console.log('sendNotification called:', title, 'alertsEnabled:', alertsEnabled);
             if (!alertsEnabled) return;
-            if (Notification.permission !== 'granted') return;
+            
+            if (Notification.permission !== 'granted') {
+                console.log('Notifications not granted');
+                return;
+            }
             
             // Check cooldown
             const now = Date.now();
             if (lastAlertTime[tag] && (now - lastAlertTime[tag]) < ALERT_COOLDOWN) {
+                console.log('Cooldown active for', tag);
                 return; // Too soon, skip
             }
             lastAlertTime[tag] = now;
             
-            // Use Service Worker for notifications (works in background)
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.ready.then((registration) => {
-                    registration.showNotification(title, {
-                        body: body,
-                        icon: '/poolmaster/icon.svg',
-                        badge: '/poolmaster/icon.svg',
-                        tag: tag,
-                        requireInteraction: true,
-                        vibrate: [200, 100, 200]
-                    });
-                });
-            } else {
-                // Fallback to regular notification
+            console.log('Sending notification:', title);
+            
+            // Simple notification (works everywhere)
+            try {
                 const notification = new Notification(title, {
                     body: body,
-                    icon: '/poolmaster/icon.svg',
                     tag: tag,
-                    requireInteraction: true
+                    requireInteraction: true,
+                    silent: false
                 });
                 
                 notification.onclick = () => {
                     window.focus();
                     notification.close();
                 };
+            } catch(e) {
+                console.error('Notification error:', e);
             }
         }
         
@@ -395,10 +393,14 @@
                     btn.className = 'alert-btn on';
                     
                     // Test notification
-                    new Notification('PoolMaster', {
-                        body: 'Les alertes sont maintenant activées !',
-                        icon: '🏊'
-                    });
+                    try {
+                        new Notification('🏊 PoolMaster', {
+                            body: 'Les alertes sont maintenant activées !',
+                            tag: 'test-alert'
+                        });
+                    } catch(e) {
+                        alert('Test: les alertes sont activées!');
+                    }
                 }
             } else {
                 alertsEnabled = false;
