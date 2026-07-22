@@ -656,9 +656,12 @@
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
                         console.log('PWA installed');
-                        // After install, show PWA mode
-                        document.getElementById('browserMode').style.display = 'none';
-                        document.getElementById('pwaMode').style.display = 'block';
+                        // Just hide install button, show message
+                        document.getElementById('browserMode').innerHTML = `
+                            <p style="color:white; text-align:center; margin-top:16px; font-size:15px;">
+                                ✅ App installée ! Ouvrez-la depuis l'écran d'accueil pour les alertes.
+                            </p>
+                        `;
                     }
                     deferredPrompt = null;
                 });
