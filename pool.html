@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>PoolMaster</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 24px;
+        }
+        .header h1 { 
+            font-size: 28px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .header .name {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        .header .status {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .card.ok { background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); }
+        .card.warning { background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); }
+        .card.alert { background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); }
+        .card.cold { background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); }
+        
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-right: 20px;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .card-content { flex: 1; }
+        .card-label { 
+            font-size: 14px; 
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        .card-value { 
+            font-size: 42px; 
+            font-weight: 800; 
+            color: #212121;
+            line-height: 1.1;
+        }
+        .card-status { 
+            font-size: 15px; 
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        
+        .status-ok { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-alert { color: #dc3545; }
+        .status-cold { color: #17a2b8; }
+        
+        .last-update {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            margin-top: 16px;
+        }
+        
+        .error-box {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            color: #721c24;
+        }
+        .error-box h2 { margin-bottom: 12px; }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+        }
+        .loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Pulse animation for live data */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>🏊 PoolMaster</h1>
+            <div class="name" id="poolName">Ma Piscine</div>
+            <div class="status" id="connectionStatus">🔄 Connexion...</div>
+        </div>
+        
+        <div id="content">
+            <div class="loading">
+                <div class="spinner"></div>
+                <div>Connexion à Firebase...</div>
+            </div>
+        </div>
+        
+        <div class="last-update" id="lastUpdate"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <script>
+        // Thresholds
+        const PH_MIN = 6.8, PH_MAX = 7.8;
+        const ORP_MIN = 650, ORP_MAX = 850;
+        const TEMP_MIN = 18, TEMP_MAX = 32;
+        
+        // Get config from URL
+        const params = new URLSearchParams(window.location.search);
+        const firebaseUrl = params.get('url');
+        const deviceId = params.get('device') || params.get('id');
+        const poolName = params.get('name') || 'Ma Piscine';
+        
+        document.getElementById('poolName').textContent = decodeURIComponent(poolName);
+        
+        function showError(message) {
+            document.getElementById('content').innerHTML = `
+                <div class="error-box">
+                    <h2>❌ Erreur</h2>
+                    <p>${message}</p>
+                </div>
+            `;
+            document.getElementById('connectionStatus').textContent = '🔴 Erreur';
+        }
+        
+        function showSensors() {
+            document.getElementById('content').innerHTML = `
+                <!-- pH -->
+                <div class="card" id="cardPh">
+                    <div class="card-icon">🧪</div>
+                    <div class="card-content">
+                        <div class="card-label">pH</div>
+                        <div class="card-value" id="phValue">--</div>
+                        <div class="card-status" id="phStatus">En attente...</div>
+                    </div>
+                </div>
+                
+                <!-- ORP -->
+                <div class="card" id="cardOrp">
+                    <div class="card-icon">⚡</div>
+                    <div class="card-content">
+                        <div class="card-label">Chlore (ORP)</div>
+                        <div class="card-value" id="orpValue">--</div>
+                        <div class="card-status" id="orpStatus">En attente...</div>
+                    </div>
+                </div>
+                
+                <!-- Temp -->
+                <div class="card" id="cardTemp">
+                    <div class="card-icon">🌡️</div>
+                    <div class="card-content">
+                        <div class="card-label">Température</div>
+                        <div class="card-value" id="tempValue">--</div>
+                        <div class="card-status" id="tempStatus">En attente...</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function updateUI(ph, orp, temp, timestamp) {
+            // pH
+            document.getElementById('phValue').textContent = ph.toFixed(2);
+            const phCard = document.getElementById('cardPh');
+            const phStatus = document.getElementById('phStatus');
+            phCard.className = 'card';
+            if (ph < PH_MIN) {
+                phCard.classList.add('alert');
+                phStatus.textContent = '⚠️ Trop acide';
+                phStatus.className = 'card-status status-alert';
+            } else if (ph > PH_MAX) {
+                phCard.classList.add('alert');
+                phStatus.textContent = '⚠️ Trop basique';
+                phStatus.className = 'card-status status-alert';
+            } else {
+                phCard.classList.add('ok');
+                phStatus.textContent = '✓ Optimal';
+                phStatus.className = 'card-status status-ok';
+            }
+            
+            // ORP
+            document.getElementById('orpValue').textContent = orp.toFixed(0) + ' mV';
+            const orpCard = document.getElementById('cardOrp');
+            const orpStatus = document.getElementById('orpStatus');
+            orpCard.className = 'card';
+            if (orp < ORP_MIN) {
+                orpCard.classList.add('alert');
+                orpStatus.textContent = '⚠️ Désinfection faible';
+                orpStatus.className = 'card-status status-alert';
+            } else if (orp > ORP_MAX) {
+                orpCard.classList.add('warning');
+                orpStatus.textContent = '⚠️ Trop de chlore';
+                orpStatus.className = 'card-status status-warning';
+            } else {
+                orpCard.classList.add('ok');
+                orpStatus.textContent = '✓ Optimal';
+                orpStatus.className = 'card-status status-ok';
+            }
+            
+            // Temp
+            document.getElementById('tempValue').textContent = temp.toFixed(1) + '°C';
+            const tempCard = document.getElementById('cardTemp');
+            const tempStatus = document.getElementById('tempStatus');
+            tempCard.className = 'card';
+            if (temp < TEMP_MIN) {
+                tempCard.classList.add('cold');
+                tempStatus.textContent = '❄️ Eau froide';
+                tempStatus.className = 'card-status status-cold';
+            } else if (temp > TEMP_MAX) {
+                tempCard.classList.add('warning');
+                tempStatus.textContent = '🔥 Eau chaude';
+                tempStatus.className = 'card-status status-warning';
+            } else {
+                tempCard.classList.add('ok');
+                tempStatus.textContent = '✓ Agréable';
+                tempStatus.className = 'card-status status-ok';
+            }
+            
+            // Timestamp
+            if (timestamp > 0) {
+                const date = new Date(timestamp * 1000);
+                document.getElementById('lastUpdate').textContent = 
+                    'Mise à jour: ' + date.toLocaleString('fr-FR');
+            }
+        }
+        
+        // Init
+        if (!firebaseUrl || !deviceId) {
+            showError('Lien invalide. Scannez le QR code de votre PoolMaster.');
+        } else {
+            try {
+                let url = firebaseUrl;
+                if (!url.startsWith('https://')) url = 'https://' + url;
+                
+                firebase.initializeApp({ databaseURL: url });
+                const db = firebase.database();
+                const ref = db.ref('devices/' + deviceId + '/sensors');
+                
+                showSensors();
+                
+                ref.on('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const d = snapshot.val();
+                        updateUI(d.ph || 0, d.orp || 0, d.temp || 0, d.timestamp || 0);
+                        document.getElementById('connectionStatus').innerHTML = '🟢 <span class="pulse">En direct</span>';
+                    } else {
+                        document.getElementById('connectionStatus').textContent = '⚪ En attente de l\'ESP32...';
+                    }
+                }, (error) => {
+                    showError('Impossible de se connecter: ' + error.message);
+                });
+                
+            } catch (e) {
+                showError('Erreur: ' + e.message);
+            }
+        }
+    </script>
+
+</body>
+</html>
