@@ -1,5 +1,5 @@
 // PoolMaster Service Worker
-const CACHE_NAME = 'poolmaster-v6';
+const CACHE_NAME = 'poolmaster-v7';
 const urlsToCache = [
   '/poolmaster/pool.html',
   '/poolmaster/manifest.json',

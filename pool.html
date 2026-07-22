@@ -650,12 +650,19 @@
             deferredPrompt = e;
         });
         
+        // Track when app is installed
+        window.addEventListener('appinstalled', () => {
+            localStorage.setItem('pwaInstalled', 'true');
+            deferredPrompt = null;
+        });
+        
         function installPWA() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
                         console.log('PWA installed');
+                        localStorage.setItem('pwaInstalled', 'true');
                         // Just hide install button, show message
                         document.getElementById('browserMode').innerHTML = `
                             <p style="color:white; text-align:center; margin-top:16px; font-size:15px;">
@@ -665,8 +672,15 @@
                     }
                     deferredPrompt = null;
                 });
+            } else if (localStorage.getItem('pwaInstalled') === 'true') {
+                // App already installed
+                document.getElementById('browserMode').innerHTML = `
+                    <p style="color:white; text-align:center; margin-top:16px; font-size:15px;">
+                        ✅ App déjà installée ! Ouvrez-la depuis l'écran d'accueil pour les alertes.
+                    </p>
+                `;
             } else {
-                // Fallback: show instructions
+                // Fallback: show instructions for manual install
                 alert('Pour installer:\n\n📱 Android: Menu ⋮ → Installer l\'application\n\n🍎 iOS: Partager ⬆️ → Sur l\'écran d\'accueil');
             }
         }
