@@ -142,6 +142,79 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
+        
+        /* Alert button */
+        .alert-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.3s;
+        }
+        .alert-btn.off {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .alert-btn.on {
+            background: #28a745;
+            color: white;
+        }
+        .alert-btn:hover { transform: scale(1.02); }
+        
+        /* Settings panel */
+        .settings-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 16px;
+            display: none;
+        }
+        .settings-panel.show { display: block; }
+        .settings-panel h3 {
+            margin-bottom: 16px;
+            color: #333;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .setting-row label {
+            font-weight: 500;
+            color: #555;
+        }
+        .setting-row input {
+            width: 70px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .setting-row span {
+            margin: 0 8px;
+            color: #999;
+        }
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
     </style>
 </head>
 <body>
@@ -168,10 +241,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script>
-        // Thresholds
-        const PH_MIN = 6.8, PH_MAX = 7.8;
-        const ORP_MIN = 650, ORP_MAX = 850;
-        const TEMP_MIN = 18, TEMP_MAX = 32;
+        // Default Thresholds (can be overridden from Firebase)
+        let thresholds = {
+            pH_min: 6.8, pH_max: 7.8,
+            ORP_min: 650, ORP_max: 850,
+            Temp_min: 18, Temp_max: 32
+        };
+        
+        // Alert state
+        let alertsEnabled = localStorage.getItem('alertsEnabled') === 'true';
+        let lastAlertTime = {};
+        const ALERT_COOLDOWN = 30 * 60 * 1000; // 30 min between same alerts
         
         // Get config from URL
         const params = new URLSearchParams(window.location.search);
@@ -180,6 +260,139 @@
         const poolName = params.get('name') || 'Ma Piscine';
         
         document.getElementById('poolName').textContent = decodeURIComponent(poolName);
+        
+        // ========== NOTIFICATIONS ==========
+        
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                alert('Votre navigateur ne supporte pas les notifications');
+                return false;
+            }
+            
+            if (Notification.permission === 'granted') {
+                return true;
+            }
+            
+            if (Notification.permission !== 'denied') {
+                const permission = await Notification.requestPermission();
+                return permission === 'granted';
+            }
+            
+            return false;
+        }
+        
+        function sendNotification(title, body, tag) {
+            if (!alertsEnabled) return;
+            if (Notification.permission !== 'granted') return;
+            
+            // Check cooldown
+            const now = Date.now();
+            if (lastAlertTime[tag] && (now - lastAlertTime[tag]) < ALERT_COOLDOWN) {
+                return; // Too soon, skip
+            }
+            lastAlertTime[tag] = now;
+            
+            // Send notification
+            const notification = new Notification(title, {
+                body: body,
+                icon: '🏊',
+                tag: tag,
+                requireInteraction: true,
+                vibrate: [200, 100, 200]
+            });
+            
+            notification.onclick = () => {
+                window.focus();
+                notification.close();
+            };
+        }
+        
+        function checkAlerts(ph, orp, temp) {
+            // pH alerts
+            if (ph < thresholds.pH_min) {
+                sendNotification(
+                    '⚠️ pH Trop Bas !',
+                    `pH: ${ph.toFixed(2)} (min: ${thresholds.pH_min})\nAjoutez du pH+`,
+                    'ph-low'
+                );
+            } else if (ph > thresholds.pH_max) {
+                sendNotification(
+                    '⚠️ pH Trop Haut !',
+                    `pH: ${ph.toFixed(2)} (max: ${thresholds.pH_max})\nAjoutez du pH-`,
+                    'ph-high'
+                );
+            }
+            
+            // ORP alerts
+            if (orp < thresholds.ORP_min) {
+                sendNotification(
+                    '⚠️ Désinfection Faible !',
+                    `ORP: ${orp.toFixed(0)} mV (min: ${thresholds.ORP_min})\nAjoutez du chlore`,
+                    'orp-low'
+                );
+            } else if (orp > thresholds.ORP_max) {
+                sendNotification(
+                    '⚠️ Trop de Chlore !',
+                    `ORP: ${orp.toFixed(0)} mV (max: ${thresholds.ORP_max})`,
+                    'orp-high'
+                );
+            }
+        }
+        
+        async function toggleAlerts() {
+            const btn = document.getElementById('alertBtn');
+            
+            if (!alertsEnabled) {
+                const granted = await requestNotificationPermission();
+                if (granted) {
+                    alertsEnabled = true;
+                    localStorage.setItem('alertsEnabled', 'true');
+                    btn.textContent = '🔔 Alertes activées';
+                    btn.className = 'alert-btn on';
+                    
+                    // Test notification
+                    new Notification('PoolMaster', {
+                        body: 'Les alertes sont maintenant activées !',
+                        icon: '🏊'
+                    });
+                }
+            } else {
+                alertsEnabled = false;
+                localStorage.setItem('alertsEnabled', 'false');
+                btn.textContent = '🔕 Activer les alertes';
+                btn.className = 'alert-btn off';
+            }
+        }
+        
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            panel.classList.toggle('show');
+        }
+        
+        function saveThresholds() {
+            thresholds.pH_min = parseFloat(document.getElementById('phMin').value) || 6.8;
+            thresholds.pH_max = parseFloat(document.getElementById('phMax').value) || 7.8;
+            thresholds.ORP_min = parseFloat(document.getElementById('orpMin').value) || 650;
+            thresholds.ORP_max = parseFloat(document.getElementById('orpMax').value) || 850;
+            
+            // Save locally
+            localStorage.setItem('thresholds_' + deviceId, JSON.stringify(thresholds));
+            
+            // Close panel
+            document.getElementById('settingsPanel').classList.remove('show');
+            alert('Seuils sauvegardés !');
+        }
+        
+        function loadLocalThresholds() {
+            const saved = localStorage.getItem('thresholds_' + deviceId);
+            if (saved) {
+                try {
+                    thresholds = {...thresholds, ...JSON.parse(saved)};
+                } catch(e) {}
+            }
+        }
+        
+        // ========== UI ==========
         
         function showError(message) {
             document.getElementById('content').innerHTML = `
@@ -222,6 +435,41 @@
                         <div class="card-status" id="tempStatus">En attente...</div>
                     </div>
                 </div>
+                
+                <!-- Alert Button -->
+                <button class="alert-btn ${alertsEnabled ? 'on' : 'off'}" id="alertBtn" onclick="toggleAlerts()">
+                    ${alertsEnabled ? '🔔 Alertes activées' : '🔕 Activer les alertes'}
+                </button>
+                
+                <!-- Settings Toggle -->
+                <button class="alert-btn off" onclick="toggleSettings()" style="margin-top:8px; font-size:14px;">
+                    ⚙️ Configurer les seuils
+                </button>
+                
+                <!-- Settings Panel -->
+                <div class="settings-panel" id="settingsPanel">
+                    <h3>⚙️ Seuils d'alerte</h3>
+                    
+                    <div class="setting-row">
+                        <label>pH</label>
+                        <div>
+                            <input type="number" id="phMin" value="${thresholds.pH_min}" step="0.1">
+                            <span>à</span>
+                            <input type="number" id="phMax" value="${thresholds.pH_max}" step="0.1">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>ORP (mV)</label>
+                        <div>
+                            <input type="number" id="orpMin" value="${thresholds.ORP_min}" step="10">
+                            <span>à</span>
+                            <input type="number" id="orpMax" value="${thresholds.ORP_max}" step="10">
+                        </div>
+                    </div>
+                    
+                    <button class="save-btn" onclick="saveThresholds()">💾 Sauvegarder</button>
+                </div>
             `;
         }
         
@@ -231,11 +479,11 @@
             const phCard = document.getElementById('cardPh');
             const phStatus = document.getElementById('phStatus');
             phCard.className = 'card';
-            if (ph < PH_MIN) {
+            if (ph < thresholds.pH_min) {
                 phCard.classList.add('alert');
                 phStatus.textContent = '⚠️ Trop acide';
                 phStatus.className = 'card-status status-alert';
-            } else if (ph > PH_MAX) {
+            } else if (ph > thresholds.pH_max) {
                 phCard.classList.add('alert');
                 phStatus.textContent = '⚠️ Trop basique';
                 phStatus.className = 'card-status status-alert';
@@ -250,11 +498,11 @@
             const orpCard = document.getElementById('cardOrp');
             const orpStatus = document.getElementById('orpStatus');
             orpCard.className = 'card';
-            if (orp < ORP_MIN) {
+            if (orp < thresholds.ORP_min) {
                 orpCard.classList.add('alert');
                 orpStatus.textContent = '⚠️ Désinfection faible';
                 orpStatus.className = 'card-status status-alert';
-            } else if (orp > ORP_MAX) {
+            } else if (orp > thresholds.ORP_max) {
                 orpCard.classList.add('warning');
                 orpStatus.textContent = '⚠️ Trop de chlore';
                 orpStatus.className = 'card-status status-warning';
@@ -269,11 +517,11 @@
             const tempCard = document.getElementById('cardTemp');
             const tempStatus = document.getElementById('tempStatus');
             tempCard.className = 'card';
-            if (temp < TEMP_MIN) {
+            if (temp < thresholds.Temp_min) {
                 tempCard.classList.add('cold');
                 tempStatus.textContent = '❄️ Eau froide';
                 tempStatus.className = 'card-status status-cold';
-            } else if (temp > TEMP_MAX) {
+            } else if (temp > thresholds.Temp_max) {
                 tempCard.classList.add('warning');
                 tempStatus.textContent = '🔥 Eau chaude';
                 tempStatus.className = 'card-status status-warning';
@@ -289,9 +537,16 @@
                 document.getElementById('lastUpdate').textContent = 
                     'Mise à jour: ' + date.toLocaleString('fr-FR');
             }
+            
+            // Check for alerts
+            checkAlerts(ph, orp, temp);
         }
         
-        // Init
+        // ========== INIT ==========
+        
+        // Load saved thresholds
+        loadLocalThresholds();
+        
         if (!firebaseUrl || !deviceId) {
             showError('Lien invalide. Scannez le QR code de votre PoolMaster.');
         } else {
