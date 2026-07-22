@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PoolMaster">
+    <title>PoolMaster</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 { font-size: 24px; }
+        .header .status { font-size: 14px; margin-top: 4px; opacity: 0.9; }
+        .header .config-btn {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        
+        .card.ok { background: #e8f5e9; }
+        .card.warning { background: #fff3e0; }
+        .card.alert { background: #ffebee; }
+        .card.cold { background: #e1f5fe; }
+        
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-right: 16px;
+        }
+        
+        .ph-icon { background: #f3e5f5; }
+        .orp-icon { background: #fff3e0; }
+        .temp-icon { background: #ffebee; }
+        
+        .card-content { flex: 1; }
+        .card-label { font-size: 14px; color: #757575; }
+        .card-value { font-size: 32px; font-weight: 700; color: #212121; }
+        .card-status { font-size: 14px; margin-top: 4px; }
+        
+        .status-ok { color: #4caf50; }
+        .status-warning { color: #ff9800; }
+        .status-alert { color: #f44336; }
+        .status-cold { color: #03a9f4; }
+        
+        .last-update {
+            text-align: center;
+            color: #9e9e9e;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        .info-card {
+            background: #e3f2fd;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+        .info-card h3 { font-size: 14px; color: #1976d2; margin-bottom: 8px; }
+        .info-card p { font-size: 13px; color: #546e7a; line-height: 1.6; }
+        
+        /* Config Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal.show { display: flex; }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal h2 { margin-bottom: 20px; color: #212121; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { 
+            display: block; 
+            font-size: 14px; 
+            font-weight: 600; 
+            margin-bottom: 6px;
+            color: #333;
+        }
+        .form-group small {
+            display: block;
+            font-size: 12px;
+            color: #757575;
+            margin-bottom: 8px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-secondary { background: #f5f5f5; color: #333; }
+        .btn:hover { opacity: 0.9; }
+        
+        .config-status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🏊 PoolMaster</h1>
+        <div class="status" id="connectionStatus">🔄 Connexion...</div>
+        <button class="config-btn" onclick="showConfig()">⚙️</button>
+    </div>
+    
+    <div class="container">
+        <!-- pH Card -->
+        <div class="card" id="cardPh">
+            <div class="card-icon ph-icon">🧪</div>
+            <div class="card-content">
+                <div class="card-label">pH</div>
+                <div class="card-value" id="phValue">--</div>
+            </div>
+            <div class="card-status" id="phStatus">En attente...</div>
+        </div>
+        
+        <!-- ORP Card -->
+        <div class="card" id="cardOrp">
+            <div class="card-icon orp-icon">⚡</div>
+            <div class="card-content">
+                <div class="card-label">ORP (Chlore)</div>
+                <div class="card-value" id="orpValue">-- mV</div>
+            </div>
+            <div class="card-status" id="orpStatus">En attente...</div>
+        </div>
+        
+        <!-- Temperature Card -->
+        <div class="card" id="cardTemp">
+            <div class="card-icon temp-icon">🌡️</div>
+            <div class="card-content">
+                <div class="card-label">Température</div>
+                <div class="card-value" id="tempValue">--°C</div>
+            </div>
+            <div class="card-status" id="tempStatus">En attente...</div>
+        </div>
+        
+        <div class="last-update" id="lastUpdate">En attente de données...</div>
+        
+        <div class="info-card">
+            <h3>📊 Valeurs optimales</h3>
+            <p>• pH: 6.8 - 7.8<br>• ORP: 650 - 850 mV<br>• Température: 18 - 32°C</p>
+        </div>
+    </div>
+    
+    <!-- Config Modal -->
+    <div class="modal" id="configModal">
+        <div class="modal-content">
+            <h2>⚙️ Configuration</h2>
+            
+            <div class="form-group">
+                <label>URL Firebase</label>
+                <small>Copiez depuis Firebase Console → Realtime Database</small>
+                <input type="text" id="cfgFirebaseUrl" placeholder="xxx-rtdb.firebasedatabase.app">
+            </div>
+            
+            <div class="form-group">
+                <label>ID de l'appareil</label>
+                <small>Configuré dans l'ESP32 (Config_Firebase.h)</small>
+                <input type="text" id="cfgDeviceId" placeholder="poolmaster_001" value="poolmaster_001">
+            </div>
+            
+            <div class="form-group">
+                <label>Nom (optionnel)</label>
+                <input type="text" id="cfgClientName" placeholder="Ma Piscine">
+            </div>
+            
+            <div class="config-status" id="configStatus"></div>
+            
+            <button class="btn btn-primary" onclick="saveConfig()">✓ Enregistrer</button>
+            <button class="btn btn-secondary" onclick="hideConfig()">Annuler</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <script>
+        // Thresholds
+        const PH_MIN = 6.8, PH_MAX = 7.8;
+        const ORP_MIN = 650, ORP_MAX = 850;
+        const TEMP_MIN = 18, TEMP_MAX = 32;
+        
+        let database = null;
+        let unsubscribe = null;
+        
+        // Load config from URL params or localStorage
+        function getConfig() {
+            // Check URL params first (QR code)
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('url') && params.has('device')) {
+                const config = {
+                    firebaseUrl: params.get('url'),
+                    deviceId: params.get('device'),
+                    clientName: params.get('name') || 'Ma Piscine'
+                };
+                saveConfigToStorage(config);
+                // Clean URL
+                window.history.replaceState({}, '', window.location.pathname);
+                return config;
+            }
+            
+            // Load from localStorage
+            const saved = localStorage.getItem('poolmaster_config');
+            return saved ? JSON.parse(saved) : null;
+        }
+        
+        function saveConfigToStorage(config) {
+            localStorage.setItem('poolmaster_config', JSON.stringify(config));
+        }
+        
+        function formatFirebaseUrl(url) {
+            let formatted = url.trim();
+            if (!formatted.startsWith('https://')) {
+                formatted = 'https://' + formatted;
+            }
+            return formatted;
+        }
+        
+        function initFirebase() {
+            const config = getConfig();
+            
+            if (!config || !config.firebaseUrl) {
+                showConfig();
+                return;
+            }
+            
+            try {
+                const firebaseConfig = {
+                    databaseURL: formatFirebaseUrl(config.firebaseUrl)
+                };
+                
+                // Initialize or use existing app
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                database = firebase.database();
+                
+                // Listen to sensor data
+                const sensorsRef = database.ref(`devices/${config.deviceId}/sensors`);
+                
+                if (unsubscribe) unsubscribe();
+                
+                sensorsRef.on('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        updateUI(data.ph || 0, data.orp || 0, data.temp || 0, data.timestamp || 0);
+                        setStatus('🟢 Connecté', 'ok');
+                    } else {
+                        setStatus('⚪ En attente de données...', 'warning');
+                    }
+                }, (error) => {
+                    setStatus('🔴 Erreur: ' + error.message, 'error');
+                });
+                
+                unsubscribe = () => sensorsRef.off();
+                
+            } catch (e) {
+                setStatus('🔴 Erreur: ' + e.message, 'error');
+                showConfig();
+            }
+        }
+        
+        function setStatus(text, type) {
+            const el = document.getElementById('connectionStatus');
+            el.textContent = text;
+        }
+        
+        function updateUI(ph, orp, temp, timestamp) {
+            // pH
+            document.getElementById('phValue').textContent = ph.toFixed(2);
+            updatePhStatus(ph);
+            
+            // ORP
+            document.getElementById('orpValue').textContent = orp.toFixed(0) + ' mV';
+            updateOrpStatus(orp);
+            
+            // Temperature
+            document.getElementById('tempValue').textContent = temp.toFixed(1) + '°C';
+            updateTempStatus(temp);
+            
+            // Timestamp
+            if (timestamp > 0) {
+                const date = new Date(timestamp * 1000);
+                document.getElementById('lastUpdate').textContent = 
+                    'Dernière mise à jour: ' + date.toLocaleString('fr-FR');
+            }
+        }
+        
+        function updatePhStatus(ph) {
+            const card = document.getElementById('cardPh');
+            const status = document.getElementById('phStatus');
+            
+            card.className = 'card';
+            if (ph < PH_MIN) {
+                card.classList.add('alert');
+                status.textContent = '⚠️ Trop acide';
+                status.className = 'card-status status-alert';
+            } else if (ph > PH_MAX) {
+                card.classList.add('alert');
+                status.textContent = '⚠️ Trop basique';
+                status.className = 'card-status status-alert';
+            } else {
+                card.classList.add('ok');
+                status.textContent = '✓ Optimal';
+                status.className = 'card-status status-ok';
+            }
+        }
+        
+        function updateOrpStatus(orp) {
+            const card = document.getElementById('cardOrp');
+            const status = document.getElementById('orpStatus');
+            
+            card.className = 'card';
+            if (orp < ORP_MIN) {
+                card.classList.add('alert');
+                status.textContent = '⚠️ Désinfection faible';
+                status.className = 'card-status status-alert';
+            } else if (orp > ORP_MAX) {
+                card.classList.add('warning');
+                status.textContent = '⚠️ Trop de chlore';
+                status.className = 'card-status status-warning';
+            } else {
+                card.classList.add('ok');
+                status.textContent = '✓ Optimal';
+                status.className = 'card-status status-ok';
+            }
+        }
+        
+        function updateTempStatus(temp) {
+            const card = document.getElementById('cardTemp');
+            const status = document.getElementById('tempStatus');
+            
+            card.className = 'card';
+            if (temp < TEMP_MIN) {
+                card.classList.add('cold');
+                status.textContent = '❄️ Eau froide';
+                status.className = 'card-status status-cold';
+            } else if (temp > TEMP_MAX) {
+                card.classList.add('warning');
+                status.textContent = '🔥 Eau chaude';
+                status.className = 'card-status status-warning';
+            } else {
+                card.classList.add('ok');
+                status.textContent = '✓ Agréable';
+                status.className = 'card-status status-ok';
+            }
+        }
+        
+        // Config Modal
+        function showConfig() {
+            const config = getConfig();
+            if (config) {
+                document.getElementById('cfgFirebaseUrl').value = config.firebaseUrl || '';
+                document.getElementById('cfgDeviceId').value = config.deviceId || 'poolmaster_001';
+                document.getElementById('cfgClientName').value = config.clientName || '';
+            }
+            document.getElementById('configModal').classList.add('show');
+        }
+        
+        function hideConfig() {
+            document.getElementById('configModal').classList.remove('show');
+            document.getElementById('configStatus').textContent = '';
+        }
+        
+        function saveConfig() {
+            const url = document.getElementById('cfgFirebaseUrl').value.trim();
+            const deviceId = document.getElementById('cfgDeviceId').value.trim();
+            const clientName = document.getElementById('cfgClientName').value.trim();
+            
+            if (!url) {
+                showConfigStatus('❌ URL Firebase requise', 'error');
+                return;
+            }
+            if (!deviceId) {
+                showConfigStatus('❌ ID appareil requis', 'error');
+                return;
+            }
+            
+            const config = { firebaseUrl: url, deviceId, clientName: clientName || 'Ma Piscine' };
+            saveConfigToStorage(config);
+            
+            hideConfig();
+            
+            // Reload Firebase connection
+            if (unsubscribe) unsubscribe();
+            location.reload();
+        }
+        
+        function showConfigStatus(text, type) {
+            const el = document.getElementById('configStatus');
+            el.textContent = text;
+            el.style.background = type === 'error' ? '#ffebee' : '#e8f5e9';
+            el.style.color = type === 'error' ? '#c62828' : '#2e7d32';
+        }
+        
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            deferredPrompt = e;
+        });
+        
+        // Init
+        document.addEventListener('DOMContentLoaded', initFirebase);
+    </script>
+
+</body>
+</html>

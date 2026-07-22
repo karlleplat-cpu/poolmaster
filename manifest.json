@@ -1,0 +1,20 @@
+{
+  "name": "PoolMaster",
+  "short_name": "PoolMaster",
+  "description": "Surveillance piscine - pH, ORP, Température",
+  "start_url": "./pool.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["utilities", "lifestyle"]
+}
