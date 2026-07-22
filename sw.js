@@ -1,8 +1,9 @@
 // PoolMaster Service Worker
-const CACHE_NAME = 'poolmaster-v1';
+const CACHE_NAME = 'poolmaster-v2';
 const urlsToCache = [
   './pool.html',
-  './manifest.json'
+  './manifest.json',
+  './icon.svg'
 ];
 
 // Install - cache files
@@ -30,14 +31,33 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch - serve from cache, fallback to network
+// Fetch - network first for HTML, cache first for others
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
-      })
-  );
+  // Always fetch HTML from network first
+  if (event.request.url.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Update cache with fresh version
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if offline
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => {
+          return response || fetch(event.request);
+        })
+    );
+  }
 });
 
 // Handle push notifications
