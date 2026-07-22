@@ -257,11 +257,23 @@
         let lastAlertTime = {};
         const ALERT_COOLDOWN = 30 * 60 * 1000; // 30 min between same alerts
         
-        // Get config from URL
+        // Get config from URL or localStorage (for PWA)
         const params = new URLSearchParams(window.location.search);
-        const firebaseUrl = params.get('url');
-        const deviceId = params.get('device') || params.get('id');
-        const poolName = params.get('name') || 'Ma Piscine';
+        let firebaseUrl = params.get('url');
+        let deviceId = params.get('device') || params.get('id');
+        let poolName = params.get('name') || 'Ma Piscine';
+        
+        // If params in URL, save them for PWA launch
+        if (firebaseUrl && deviceId) {
+            localStorage.setItem('poolmaster_firebaseUrl', firebaseUrl);
+            localStorage.setItem('poolmaster_deviceId', deviceId);
+            localStorage.setItem('poolmaster_poolName', poolName);
+        } else {
+            // Try to load from localStorage (PWA mode)
+            firebaseUrl = localStorage.getItem('poolmaster_firebaseUrl');
+            deviceId = localStorage.getItem('poolmaster_deviceId');
+            poolName = localStorage.getItem('poolmaster_poolName') || 'Ma Piscine';
+        }
         
         document.getElementById('poolName').textContent = decodeURIComponent(poolName);
         
