@@ -257,7 +257,7 @@
         // Alert state
         let alertsEnabled = localStorage.getItem('alertsEnabled') === 'true';
         let lastAlertTime = {};
-        const ALERT_COOLDOWN = 30 * 60 * 1000; // 30 min between same alerts
+        const ALERT_COOLDOWN = 1 * 60 * 1000; // 1 min between same alerts (for testing)
         
         // Get config from URL or localStorage (for PWA)
         const params = new URLSearchParams(window.location.search);
