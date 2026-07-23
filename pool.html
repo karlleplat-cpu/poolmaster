@@ -249,7 +249,9 @@
         let thresholds = {
             pH_min: 6.8, pH_max: 7.8,
             ORP_min: 650, ORP_max: 850,
-            Temp_min: 18, Temp_max: 32
+            Temp_min: 18, Temp_max: 32,
+            TDS_max: 500,
+            Light_min: 500, Light_max: 5000
         };
         
         // Alert state
@@ -381,6 +383,32 @@
             }
         }
         
+        function checkAlertsExtended(tds, light) {
+            // TDS alerts
+            if (tds > thresholds.TDS_max) {
+                sendNotification(
+                    '💧 TDS Trop Élevé !',
+                    `TDS: ${tds.toFixed(0)} ppm (max: ${thresholds.TDS_max} ppm)`,
+                    'tds-high'
+                );
+            }
+            
+            // Light alerts
+            if (light < thresholds.Light_min) {
+                sendNotification(
+                    '🌑 Lumière Insuffisante !',
+                    `Lumière: ${light.toFixed(0)} lux (min: ${thresholds.Light_min} lux)`,
+                    'light-low'
+                );
+            } else if (light > thresholds.Light_max) {
+                sendNotification(
+                    '☀️ Lumière Trop Forte !',
+                    `Lumière: ${light.toFixed(0)} lux (max: ${thresholds.Light_max} lux)`,
+                    'light-high'
+                );
+            }
+        }
+        
         async function toggleAlerts() {
             const btn = document.getElementById('alertBtn');
             
@@ -422,6 +450,9 @@
             thresholds.ORP_max = parseFloat(document.getElementById('orpMax').value) || 850;
             thresholds.Temp_min = parseFloat(document.getElementById('tempMin').value) || 18;
             thresholds.Temp_max = parseFloat(document.getElementById('tempMax').value) || 32;
+            thresholds.TDS_max = parseFloat(document.getElementById('tdsMax').value) || 500;
+            thresholds.Light_min = parseFloat(document.getElementById('lightMin').value) || 500;
+            thresholds.Light_max = parseFloat(document.getElementById('lightMax').value) || 5000;
             
             // Save locally
             localStorage.setItem('thresholds_' + deviceId, JSON.stringify(thresholds));
@@ -484,6 +515,26 @@
                     </div>
                 </div>
                 
+                <!-- TDS -->
+                <div class="card" id="cardTds">
+                    <div class="card-icon">💧</div>
+                    <div class="card-content">
+                        <div class="card-label">TDS (Minéraux)</div>
+                        <div class="card-value" id="tdsValue">--</div>
+                        <div class="card-status" id="tdsStatus">En attente...</div>
+                    </div>
+                </div>
+                
+                <!-- Lumière -->
+                <div class="card" id="cardLight">
+                    <div class="card-icon">☀️</div>
+                    <div class="card-content">
+                        <div class="card-label">Lumière</div>
+                        <div class="card-value" id="lightValue">--</div>
+                        <div class="card-status" id="lightStatus">En attente...</div>
+                    </div>
+                </div>
+                
                 <!-- Mode Browser: Install Button only -->
                 <div id="browserMode" style="display:none;">
                     <button class="alert-btn off" id="installBtn" onclick="installPWA()" style="background:#4CAF50;">
@@ -534,6 +585,22 @@
                             <input type="number" id="tempMin" value="${thresholds.Temp_min}" step="1">
                             <span>à</span>
                             <input type="number" id="tempMax" value="${thresholds.Temp_max}" step="1">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>TDS max (ppm)</label>
+                        <div>
+                            <input type="number" id="tdsMax" value="${thresholds.TDS_max}" step="50">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label>Lumière (lux)</label>
+                        <div>
+                            <input type="number" id="lightMin" value="${thresholds.Light_min}" step="100">
+                            <span>à</span>
+                            <input type="number" id="lightMax" value="${thresholds.Light_max}" step="100">
                         </div>
                     </div>
                     
@@ -612,6 +679,45 @@
             
             // Check for alerts
             checkAlerts(ph, orp, temp);
+        }
+        
+        function updateUIExtended(tds, light) {
+            // TDS
+            document.getElementById('tdsValue').textContent = tds.toFixed(0) + ' ppm';
+            const tdsCard = document.getElementById('cardTds');
+            const tdsStatus = document.getElementById('tdsStatus');
+            tdsCard.className = 'card';
+            if (tds > thresholds.TDS_max) {
+                tdsCard.classList.add('warning');
+                tdsStatus.textContent = '⚠️ Minéraux élevés';
+                tdsStatus.className = 'card-status status-warning';
+            } else {
+                tdsCard.classList.add('ok');
+                tdsStatus.textContent = '✓ Normal';
+                tdsStatus.className = 'card-status status-ok';
+            }
+            
+            // Lumière
+            document.getElementById('lightValue').textContent = light.toFixed(0) + ' lux';
+            const lightCard = document.getElementById('cardLight');
+            const lightStatus = document.getElementById('lightStatus');
+            lightCard.className = 'card';
+            if (light < thresholds.Light_min) {
+                lightCard.classList.add('cold');
+                lightStatus.textContent = '🌑 Faible';
+                lightStatus.className = 'card-status status-cold';
+            } else if (light > thresholds.Light_max) {
+                lightCard.classList.add('warning');
+                lightStatus.textContent = '☀️ Intense';
+                lightStatus.className = 'card-status status-warning';
+            } else {
+                lightCard.classList.add('ok');
+                lightStatus.textContent = '✓ Optimal';
+                lightStatus.className = 'card-status status-ok';
+            }
+            
+            // Check extended alerts
+            checkAlertsExtended(tds, light);
         }
         
         // ========== INIT ==========
@@ -707,6 +813,7 @@
                     if (snapshot.exists()) {
                         const d = snapshot.val();
                         updateUI(d.ph || 0, d.orp || 0, d.temp || 0, d.timestamp || 0);
+                        updateUIExtended(d.tds || 0, d.light || 0);
                         document.getElementById('connectionStatus').innerHTML = '🟢 <span class="pulse">En direct</span>';
                     } else {
                         document.getElementById('connectionStatus').textContent = '⚪ En attente de l\'ESP32...';
